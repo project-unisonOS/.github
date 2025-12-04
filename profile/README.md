@@ -28,10 +28,9 @@ To explore or contribute:
 
 ## Recommended Repos to Explore
 
-- `unison-devstack` – Mete repo - START HERE 
+- `unison-workspace` – Meta repo - START HERE 
 - `unison-devstack` – Local development environment  
 - `unison-orchestrator` – Core intent and agent coordinator  
-- `unison-identity` – Identity, claims, and profile services  
 - `unison-context` – Context management and baton handoff  
 - `unison-storage` – Secure local data storage  
 - `unison-inference` – Local and hybrid inference plumbing
