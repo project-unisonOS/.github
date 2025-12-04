@@ -28,6 +28,7 @@ To explore or contribute:
 
 ## Recommended Repos to Explore
 
+- `unison-devstack` – Mete repo - START HERE 
 - `unison-devstack` – Local development environment  
 - `unison-orchestrator` – Core intent and agent coordinator  
 - `unison-identity` – Identity, claims, and profile services  
