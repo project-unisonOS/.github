@@ -1,0 +1,20 @@
+# Default owners for security and compliance-critical changes
+# Adjust team handles/emails as appropriate.
+
+* @project-unisonOS/security-leads
+.github/ @project-unisonOS/security-leads
+**/SECURITY.md @project-unisonOS/security-leads
+**/CODEOWNERS @project-unisonOS/security-leads
+**/CONTRIBUTING.md @project-unisonOS/maintainers
+**/docs/** @project-unisonOS/docs
+**/policies/** @project-unisonOS/security-leads
+
+# Service areas (examples; refine per repo)
+unison-orchestrator/** @project-unisonOS/orchestrator
+unison-context/** @project-unisonOS/context
+unison-storage/** @project-unisonOS/storage
+unison-auth/** @project-unisonOS/auth
+unison-policy/** @project-unisonOS/policy
+unison-io-**/** @project-unisonOS/io
+unison-actuation/** @project-unisonOS/actuation
+unison-network-vpn/** @project-unisonOS/platform

@@ -1,0 +1,48 @@
+name: reusable-policy-bundle
+
+on:
+  workflow_call:
+    inputs:
+      policy-dir:
+        type: string
+        required: false
+        default: policies
+      bundle-out:
+        type: string
+        required: false
+        default: bundle.tar.gz
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+jobs:
+  build-policy-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up OPA
+        run: |
+          curl -L -o opa https://openpolicyagent.org/downloads/latest/opa_linux_amd64_static
+          chmod +x ./opa
+          sudo mv ./opa /usr/local/bin/opa
+
+      - name: Validate policies
+        run: |
+          opa fmt --fail "${{ inputs.policy-dir }}" 2>/dev/null || true
+          opa test "${{ inputs.policy-dir }}"
+
+      - name: Build bundle
+        run: |
+          opa build --bundle ${{ inputs.policy-dir }} -o ${{ inputs.bundle-out }}
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ inputs.bundle-out }}
+          path: ${{ inputs.bundle-out }}
