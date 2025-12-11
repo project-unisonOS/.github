@@ -1,0 +1,59 @@
+name: reusable-node-security
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: Node version to use
+        required: false
+        default: "18.x"
+      working-directory:
+        description: Optional working directory
+        required: false
+        default: "."
+      lint-command:
+        description: Command to run eslint (default: npx eslint .)
+        required: false
+        default: "npx eslint ."
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci --ignore-scripts; elif [ -f package.json ]; then npm install --ignore-scripts; else echo "No package.json; skipping install"; fi
+
+      - name: Lint (eslint with security rules)
+        run: |
+          if [ -f package.json ]; then
+            ${{ inputs.lint-command }}
+          else
+            echo "No package.json; skipping eslint"
+          fi
+
+      - name: Unit tests (if present)
+        run: |
+          if npm run | grep -q " test"; then
+            npm test -- --runInBand
+          else
+            echo "No test script; skipping"
+          fi

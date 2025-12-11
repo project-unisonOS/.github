@@ -14,7 +14,11 @@ on:
       enable-semgrep:
         description: Run semgrep SAST
         required: false
-        default: false
+        default: true
+      bandit-skips:
+        description: Comma-separated Bandit rule IDs to skip (e.g., B101,B110)
+        required: false
+        default: ""
       working-directory:
         description: Optional working directory
         required: false
@@ -71,14 +75,19 @@ jobs:
 
       - name: Bandit (SAST)
         if: ${{ inputs.enable-bandit == 'true' }}
-        run: bandit -q -r .
+        run: |
+          if [ -n "${{ inputs.bandit-skips }}" ]; then
+            bandit -q -r . --skip "${{ inputs.bandit-skips }}"
+          else
+            bandit -q -r .
+          fi
 
       - name: Semgrep (SAST)
         if: ${{ inputs.enable-semgrep == 'true' }}
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
-          semgrep ci --config p/auto || semgrep scan --config p/auto
+          semgrep ci --config p/auto --enable-metrics=auto || semgrep scan --config p/auto --enable-metrics=auto
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@22438a435773de8c97dc0958cc0b823c45b064ac # master
