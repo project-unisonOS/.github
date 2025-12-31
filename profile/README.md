@@ -2,10 +2,10 @@
 
 **UnisonOS is an edge-first, human-centered AI platform for personal computing.**
 
-It treats intelligence as a **local capability**—running on your own hardware, shaped by your objectives, and orchestrated through natural interaction rather than apps, files, or commands. Nothing new to learn. No cloud dependency by default.
+It treats intelligence as a **local capability** - running on your own hardware, shaped by your objectives, and orchestrated through natural interaction rather than apps, files, or commands. Nothing new to learn. No cloud dependency by default.
 
 UnisonOS is designed to invert the traditional computing model:
-the system adapts to the person—not the other way around.
+the system adapts to the person - not the other way around.
 
 ---
 
@@ -20,7 +20,7 @@ UnisonOS exists to make a different model possible:
 - **People control the objectives of their AI**
 - **Intelligence runs locally whenever possible**
 - **Agency, consent, and context are first-class system concerns**
-- **Accessibility is foundational—not an add-on**
+- **Accessibility is foundational - not an add-on**
 
 UnisonOS is a new computing substrate for intent-driven interaction.
 
