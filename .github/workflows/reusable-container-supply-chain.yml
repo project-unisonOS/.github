@@ -1,0 +1,105 @@
+name: reusable-container-supply-chain
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        required: true
+        type: string
+      dockerfile:
+        required: false
+        type: string
+        default: Dockerfile
+      context:
+        required: false
+        type: string
+        default: .
+      registry:
+        required: false
+        type: string
+        default: ghcr.io
+      enable-signing:
+        description: Push and keylessly sign when registry credentials are supplied
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      REGISTRY_USERNAME:
+        required: false
+      REGISTRY_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
+
+      - name: Login to registry
+        if: ${{ inputs.enable-signing }}
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Define image reference
+        id: image
+        shell: bash
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+        run: |
+          image_name="${IMAGE_NAME,,}"
+          echo "ref=${REGISTRY}/${GITHUB_REPOSITORY_OWNER,,}/${image_name}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: ${{ inputs.enable-signing }}
+          load: true
+          tags: ${{ steps.image.outputs.ref }}
+
+      - name: SBOM (syft)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: ${{ steps.image.outputs.ref }}
+          artifact-name: sbom-${{ github.event.repository.name }}.spdx.json
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          image-ref: ${{ steps.image.outputs.ref }}
+          ignore-unfixed: true
+          format: table
+          exit-code: "1"
+          vuln-type: "os,library"
+
+      - name: Install Cosign
+        if: ${{ inputs.enable-signing }}
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
+
+      - name: Cosign sign and verify (keyless)
+        if: ${{ inputs.enable-signing }}
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          image_ref="${{ steps.image.outputs.ref }}"
+          cosign sign --yes "$image_ref"
+          cosign verify "$image_ref" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "https://github.com/${{ github.repository }}"

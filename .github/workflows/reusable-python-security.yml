@@ -1,0 +1,177 @@
+name: reusable-python-security
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to use
+        required: false
+        default: "3.11"
+        type: string
+      enable-bandit:
+        description: Run bandit SAST
+        required: false
+        default: true
+        type: boolean
+      enable-semgrep:
+        description: Run semgrep SAST
+        required: false
+        default: true
+        type: boolean
+      bandit-skips:
+        description: Comma-separated Bandit rule IDs to skip (e.g., B101,B110)
+        required: false
+        default: ""
+        type: string
+      working-directory:
+        description: Optional working directory
+        required: false
+        default: "."
+        type: string
+      unison-common-ref:
+        description: Optional immutable unison-common commit to install before tests
+        required: false
+        default: ""
+        type: string
+      enable-principal-binding-test-bypass:
+        description: Enable the test-only principal binding bypass while pytest runs
+        required: false
+        default: false
+        type: boolean
+      dependency-file:
+        description: Locked dependency file to install
+        required: false
+        default: requirements.txt
+        type: string
+      checkout-submodules:
+        description: Recursively initialize submodules before testing and scanning
+        required: false
+        default: false
+        type: boolean
+      pytest-targets:
+        description: Space-separated repository-owned pytest paths; empty discovers tests normally
+        required: false
+        default: ""
+        type: string
+      trivy-scan-ref:
+        description: Repository-owned path for the filesystem vulnerability scan
+        required: false
+        default: "."
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  lint-test-scan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 1
+          submodules: ${{ inputs.checkout-submodules && 'recursive' || 'false' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          dependency_file="${{ inputs.dependency-file }}"
+          if [ -f constraints.txt ] && [ -f "$dependency_file" ]; then
+            pip install -c constraints.txt -r "$dependency_file"
+          elif [ -f "$dependency_file" ]; then
+            pip install -r "$dependency_file"
+          fi
+          if [ -n "${{ inputs.unison-common-ref }}" ]; then
+            # The published package and an immutable source commit can carry the
+            # same version. Force the explicitly requested commit to win over a
+            # dependency-installed release in that case.
+            pip install --force-reinstall --no-deps \
+              "git+https://github.com/project-unisonOS/unison-common.git@${{ inputs.unison-common-ref }}"
+          fi
+          pip install pytest pytest-cov
+          pip install bandit==1.7.9
+          pip install semgrep==1.77.0
+
+      - name: Lint/format (ruff if present, fallback to flake8)
+        run: |
+          if [ -f pyproject.toml ] && grep -q "ruff" pyproject.toml; then
+            pip install ruff==0.8.4
+            ruff check .
+          elif python - <<'PY' 2>/dev/null
+          import importlib.util as s
+          raise SystemExit(0 if s.find_spec("flake8") else 1)
+          PY
+          then
+            flake8 .
+          else
+            echo "No Python linter configured; skipping"
+          fi
+
+      - name: Tests
+        env:
+          OTEL_SDK_DISABLED: "true"
+          UNISON_PRINCIPAL_BINDING_TEST_BYPASS: ${{ inputs.enable-principal-binding-test-bypass }}
+        run: |
+          if [ -f pytest.ini ] || find tests -type f -name 'test_*.py' -print -quit 2>/dev/null | grep -q .; then
+            pytest_targets=()
+            if [ -n "${{ inputs.pytest-targets }}" ]; then
+              read -r -a pytest_targets <<< "${{ inputs.pytest-targets }}"
+            fi
+            pytest --maxfail=1 --disable-warnings -q "${pytest_targets[@]}"
+          else
+            echo "No tests detected; skipping"
+          fi
+
+      - name: Bandit (SAST)
+        if: ${{ inputs.enable-bandit }}
+        run: |
+          scan_targets=()
+          if [ -d src ]; then
+            scan_targets+=(src)
+          else
+            while IFS= read -r -d '' directory; do
+              scan_targets+=("$directory")
+            done < <(find . -mindepth 2 -maxdepth 2 -type d -name src -print0)
+          fi
+          if [ "${#scan_targets[@]}" -eq 0 ]; then
+            scan_targets+=(.)
+          fi
+          if [ -n "${{ inputs.bandit-skips }}" ]; then
+            bandit -q -r "${scan_targets[@]}" -ll --skip "${{ inputs.bandit-skips }}"
+          else
+            bandit -q -r "${scan_targets[@]}" -ll
+          fi
+
+      - name: Semgrep (SAST)
+        if: ${{ inputs.enable-semgrep }}
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        run: |
+          semgrep ci --config p/auto --metrics=auto || semgrep scan --config p/auto --metrics=auto
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.70.0
+          scan-type: fs
+          scan-ref: ${{ inputs.trivy-scan-ref }}
+          ignore-unfixed: true
+          format: table
+          exit-code: "1"
+          vuln-type: "os,library"
+
+      - name: SBOM (syft)
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: ${{ inputs.working-directory }}
+          artifact-name: sbom-${{ github.event.repository.name }}.spdx.json
