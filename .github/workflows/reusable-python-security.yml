@@ -79,7 +79,7 @@ jobs:
 
       - name: Tests
         run: |
-          if [ -f pytest.ini ] || [ -d tests ]; then
+          if [ -f pytest.ini ] || find tests -type f -name 'test_*.py' -print -quit 2>/dev/null | grep -q .; then
             pytest --maxfail=1 --disable-warnings -q
           else
             echo "No tests detected; skipping"
