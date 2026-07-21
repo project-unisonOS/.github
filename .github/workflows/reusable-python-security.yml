@@ -104,6 +104,7 @@ jobs:
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@22438a435773de8c97dc0958cc0b823c45b064ac # master
         with:
+          version: v0.72.0
           scan-type: fs
           ignore-unfixed: true
           format: table
