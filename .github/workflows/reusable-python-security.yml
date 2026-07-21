@@ -92,7 +92,11 @@ jobs:
             pip install -r "$dependency_file"
           fi
           if [ -n "${{ inputs.unison-common-ref }}" ]; then
-            pip install "git+https://github.com/project-unisonOS/unison-common.git@${{ inputs.unison-common-ref }}"
+            # The published package and an immutable source commit can carry the
+            # same version. Force the explicitly requested commit to win over a
+            # dependency-installed release in that case.
+            pip install --force-reinstall --no-deps \
+              "git+https://github.com/project-unisonOS/unison-common.git@${{ inputs.unison-common-ref }}"
           fi
           pip install pytest pytest-cov
           pip install bandit==1.7.9
