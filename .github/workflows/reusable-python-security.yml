@@ -99,7 +99,7 @@ jobs:
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         run: |
-          semgrep ci --config p/auto --enable-metrics=auto || semgrep scan --config p/auto --enable-metrics=auto
+          semgrep ci --config p/auto --metrics=auto || semgrep scan --config p/auto --metrics=auto
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@22438a435773de8c97dc0958cc0b823c45b064ac # master
