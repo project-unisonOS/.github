@@ -1,5 +1,11 @@
 ## Contributing to UnisonOS
 
+Most contributors may use coding agents. Agents do not receive additional
+authority: repository contracts, review requirements, privacy boundaries, and
+evidence standards apply identically. Prefer bounded issues using the
+agent-ready template, keep normative state in the repository rather than chat,
+and make every non-trivial handoff reproducible by another human or agent.
+
 Thank you for contributing. Security and accessibility are first-class requirements.
 
 ### Ground rules

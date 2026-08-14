@@ -1,0 +1,47 @@
+name: Agent-ready implementation task
+description: A bounded task suitable for a human contributor working with a coding agent
+title: "[Task]: "
+labels: ["agent-ready"]
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: Describe the observable outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: State what must not be changed or claimed.
+    validations:
+      required: true
+  - type: textarea
+    id: authority
+    attributes:
+      label: Authority and contracts
+      description: Link owning repositories, contracts, decisions, and security boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and starting revision
+      description: Name the profile, machine class, repositories, and immutable commits.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and evidence
+      description: Give exact tests and label evidence as unit, simulation, hosted CI, physical, or participatory.
+    validations:
+      required: true
+  - type: textarea
+    id: recovery
+    attributes:
+      label: Recovery and handoff
+      description: State rollback, stop conditions, unresolved risks, and the next action.
+    validations:
+      required: true
